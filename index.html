@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pokémon Speed Showdown</title>
+    <title>vsPoke</title>
     <!-- Modern Font -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -21,52 +21,10 @@
         <div class="bg-shape shape-3"></div>
 
         <header class="glass-panel">
-            <h1>Pokémon Speed Showdown</h1>
+            <h1>vsPoke</h1>
             <p>¿Quién es más rápido en el campo de batalla?</p>
 
-            <details class="settings-details">
-                <summary class="glass-btn">Ajustes</summary>
-                <div class="controls-container">
-                    <div class="toggle-container">
-                        <label class="switch">
-                            <input type="checkbox" id="time-attack-toggle" onchange="onTimeAttackToggle()">
-                            <span class="slider round"></span>
-                        </label>
-                        <span class="toggle-label">Modo Contrarreloj (1 Min.)</span>
-                    </div>
-                    
-                    <select id="gen-filter" class="glass-select" onchange="onFilterChange()">
-                        <option value="all">Todas las Generaciones</option>
-                        <option value="1">Generación 1 (Kanto)</option>
-                        <option value="2">Generación 2 (Johto)</option>
-                        <option value="3">Generación 3 (Hoenn)</option>
-                        <option value="4">Generación 4 (Sinnoh)</option>
-                        <option value="5">Generación 5 (Unova)</option>
-                        <option value="6">Generación 6 (Kalos)</option>
-                        <option value="7">Generación 7 (Alola)</option>
-                        <option value="8">Generación 8 (Galar)</option>
-                        <option value="9">Generación 9 (Paldea)</option>
-                    </select>
-                    <select id="stat-filter" class="glass-select" onchange="onFilterChange()">
-                        <option value="speed">Velocidad</option>
-                        <option value="hp">HP (Vida)</option>
-                        <option value="attack">Ataque</option>
-                        <option value="defense">Defensa</option>
-                        <option value="special-attack">Ataque Especial</option>
-                        <option value="special-defense">Defensa Especial</option>
-                    </select>
-                    <select id="count-filter" class="glass-select" onchange="onFilterChange()">
-                        <option value="2">2 Pokémon</option>
-                        <option value="3">3 Pokémon</option>
-                        <option value="4">4 Pokémon</option>
-                    </select>
-                    <select id="difficulty-filter" class="glass-select" onchange="onFilterChange()">
-                        <option value="easy">Fácil (Aleatorio)</option>
-                        <option value="medium">Medio (Diff 11-26 pts)</option>
-                        <option value="hard">Difícil (Diff 1-10 pts)</option>
-                    </select>
-                </div>
-            </details>
+
 
             <div class="timer-display hidden" id="timer-display">
                 ⏱️ <span id="timer-text">01:00</span>
@@ -74,7 +32,8 @@
 
             <div class="score-board">
                 <div class="score"><span id="score-label">Racha:</span> <span id="current-streak">0</span></div>
-                <div class="score high-score"><span id="high-score-label">Mejor Racha:</span> <span id="high-score">0</span></div>
+                <div class="score high-score"><span id="high-score-label">Mejor Racha:</span> <span
+                        id="high-score">0</span></div>
             </div>
         </header>
 
@@ -84,16 +43,71 @@
                 <p>Buscando contendientes...</p>
             </div>
 
-            <div class="pokemon-container hidden" id="pokemon-container">
-                <!-- Cards will be dynamically injected here by JS -->
-            </div>
+            <div class="board-wrapper">
+                <div class="pokemon-container hidden" id="pokemon-container">
+                    <!-- Cards will be dynamically injected here by JS -->
+                </div>
 
-            <div id="result-overlay" class="glass-panel hidden">
-                <h2 id="result-message">¡Correcto!</h2>
-                <button id="next-btn" class="primary-btn" onclick="nextRound()">Siguiente Ronda</button>
+                <div id="result-overlay" class="glass-panel hidden">
+                    <h2 id="result-message">¡Correcto!</h2>
+                    <button id="next-btn" class="primary-btn" onclick="nextRound()">Siguiente Ronda</button>
+                </div>
             </div>
         </main>
     </div>
+
+    <button id="fab-settings" class="fab-btn" aria-label="Ajustes" onclick="toggleSettingsModal()">⚙️</button>
+
+    <div id="modal-backdrop" class="modal-backdrop hidden" onclick="toggleSettingsModal()"></div>
+
+    <div id="settings-modal" class="glass-panel modal-panel hidden">
+        <div class="modal-header">
+            <h2>Ajustes</h2>
+            <button class="close-btn" onclick="toggleSettingsModal()">✖</button>
+        </div>
+        <div class="controls-container">
+            <div class="toggle-container">
+                <span class="toggle-label">Modo:</span>
+                <select id="game-mode" class="glass-select" onchange="onGameModeChange()" style="padding: 0.4rem 1rem;">
+                    <option value="normal">Rachas Continuas (Libre)</option>
+                    <option value="time-attack">Global 60s (Suma Aciertos)</option>
+                    <option value="lightning">Relámpago (10s por Ronda)</option>
+                </select>
+            </div>
+
+            <select id="gen-filter" class="glass-select" onchange="onFilterChange()">
+                <option value="all">Todas las Generaciones</option>
+                <option value="1">Generación 1 (Kanto)</option>
+                <option value="2">Generación 2 (Johto)</option>
+                <option value="3">Generación 3 (Hoenn)</option>
+                <option value="4">Generación 4 (Sinnoh)</option>
+                <option value="5">Generación 5 (Unova)</option>
+                <option value="6">Generación 6 (Kalos)</option>
+                <option value="7">Generación 7 (Alola)</option>
+                <option value="8">Generación 8 (Galar)</option>
+                <option value="9">Generación 9 (Paldea)</option>
+            </select>
+            <select id="stat-filter" class="glass-select" onchange="onFilterChange()">
+                <option value="speed">Velocidad</option>
+                <option value="hp">HP (Vida)</option>
+                <option value="attack">Ataque</option>
+                <option value="defense">Defensa</option>
+                <option value="special-attack">Ataque Especial</option>
+                <option value="special-defense">Defensa Especial</option>
+            </select>
+            <select id="count-filter" class="glass-select" onchange="onFilterChange()">
+                <option value="2">2 Pokémon</option>
+                <option value="3">3 Pokémon</option>
+                <option value="4">4 Pokémon</option>
+            </select>
+            <select id="difficulty-filter" class="glass-select" onchange="onFilterChange()">
+                <option value="easy">Fácil (Aleatorio)</option>
+                <option value="medium">Medio (Diff 11-26 pts)</option>
+                <option value="hard">Difícil (Diff 1-10 pts)</option>
+            </select>
+        </div>
+    </div>
+
     <script src="script.js"></script>
 </body>
 

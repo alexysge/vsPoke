@@ -2,16 +2,17 @@ let currentPokemons = [];
 let streak = 0;
 let highScore = 0;
 let timeAttackHighScore = 0;
+let lightningHighScore = 0;
 let isAnimating = false;
 let currentGen = 'all';
 let currentStat = 'speed';
 let currentCount = 2;
 let currentDifficulty = 'easy';
 
-// Time Attack State
-let isTimeAttackMode = false;
+// Game Modes State
+let gameMode = 'normal'; // normal, time-attack, lightning
 let timeAttackActive = false;
-let timeRemaining = 60;
+let timeRemaining = 0;
 let timerInterval = null;
 
 // ID ranges for each Pokemon Generation
@@ -50,7 +51,7 @@ const DOM = {
     statFilter: document.getElementById('stat-filter'),
     countFilter: document.getElementById('count-filter'),
     difficultyFilter: document.getElementById('difficulty-filter'),
-    timeAttackToggle: document.getElementById('time-attack-toggle'),
+    gameMode: document.getElementById('game-mode'),
     timerDisplay: document.getElementById('timer-display'),
     timerText: document.getElementById('timer-text'),
     scoreLabel: document.getElementById('score-label'),
@@ -60,6 +61,19 @@ const DOM = {
 
 init();
 
+function toggleSettingsModal() {
+    const modal = document.getElementById('settings-modal');
+    const backdrop = document.getElementById('modal-backdrop');
+    
+    if (modal.classList.contains('hidden')) {
+        modal.classList.remove('hidden');
+        backdrop.classList.remove('hidden');
+    } else {
+        modal.classList.add('hidden');
+        backdrop.classList.add('hidden');
+    }
+}
+
 function init() {
     const savedHighScore = localStorage.getItem('pokeSpeedHighScore');
     if (savedHighScore) highScore = parseInt(savedHighScore);
@@ -67,23 +81,38 @@ function init() {
     
     const savedTAHighScore = localStorage.getItem('pokeSpeedTAHighScore');
     if (savedTAHighScore) timeAttackHighScore = parseInt(savedTAHighScore);
+
+    const savedLgHighScore = localStorage.getItem('pokeSpeedLgHighScore');
+    if (savedLgHighScore) lightningHighScore = parseInt(savedLgHighScore);
     
     startRound();
 }
 
-function onTimeAttackToggle() {
-    isTimeAttackMode = DOM.timeAttackToggle.checked;
+function onGameModeChange() {
+    gameMode = DOM.gameMode.value;
     
-    if (isTimeAttackMode) {
-        DOM.countFilter.value = '2';
-        DOM.countFilter.disabled = true;
-        DOM.difficultyFilter.value = 'hard';
-        DOM.difficultyFilter.disabled = true;
-        
+    if (gameMode !== 'normal') {
         DOM.timerDisplay.classList.remove('hidden');
-        DOM.scoreLabel.textContent = "Aciertos:";
-        DOM.highScoreLabel.textContent = "Récord 1m:";
-        DOM.highScore.textContent = timeAttackHighScore;
+        
+        if (gameMode === 'time-attack') {
+            DOM.countFilter.value = '2';
+            DOM.countFilter.disabled = true;
+            DOM.difficultyFilter.value = 'hard';
+            DOM.difficultyFilter.disabled = true;
+            
+            DOM.scoreLabel.textContent = "Aciertos:";
+            DOM.highScoreLabel.textContent = "Récord 1m:";
+            DOM.highScore.textContent = timeAttackHighScore;
+        } else if (gameMode === 'lightning') {
+            DOM.countFilter.value = '2'; // Set initial state
+            DOM.countFilter.disabled = false; // Allow user to change it
+            DOM.difficultyFilter.value = 'hard';
+            DOM.difficultyFilter.disabled = true;
+            
+            DOM.scoreLabel.textContent = "Racha:";
+            DOM.highScoreLabel.textContent = "Récord 10s:";
+            DOM.highScore.textContent = lightningHighScore;
+        }
     } else {
         DOM.countFilter.disabled = false;
         DOM.difficultyFilter.disabled = false;
@@ -103,7 +132,10 @@ function resetGame() {
     
     clearInterval(timerInterval);
     timeAttackActive = false;
-    timeRemaining = 60;
+    
+    if (gameMode === 'time-attack') timeRemaining = 60;
+    else if (gameMode === 'lightning') timeRemaining = 10;
+    
     updateTimerText();
     DOM.timerDisplay.classList.remove('warning');
     
@@ -115,11 +147,12 @@ function updateTimerText() {
     const sec = (timeRemaining % 60).toString().padStart(2, '0');
     DOM.timerText.textContent = `${min}:${sec}`;
     
-    if (timeRemaining <= 10 && timeRemaining > 0) {
-        DOM.timerDisplay.classList.add('warning');
-    } else {
-        DOM.timerDisplay.classList.remove('warning');
-    }
+    let isWarningPeriod = false;
+    if (gameMode === 'time-attack' && timeRemaining <= 10 && timeRemaining > 0) isWarningPeriod = true;
+    if (gameMode === 'lightning' && timeRemaining <= 3 && timeRemaining > 0) isWarningPeriod = true;
+    
+    if (isWarningPeriod) DOM.timerDisplay.classList.add('warning');
+    else DOM.timerDisplay.classList.remove('warning');
 }
 
 function onFilterChange() {
@@ -153,12 +186,20 @@ function processPokemonData(data) {
 
 async function startRound() {
     isAnimating = true;
+    clearInterval(timerInterval);
+    
+    if (gameMode === 'lightning') {
+        timeRemaining = 10;
+        updateTimerText();
+    }
+    
     currentPokemons = [];
     
     DOM.loadingState.style.display = 'flex';
     DOM.pokemonContainer.classList.add('hidden');
     DOM.pokemonContainer.innerHTML = ''; 
     DOM.resultOverlay.classList.add('hidden');
+    DOM.nextBtn.classList.remove('hidden');
     DOM.nextBtn.textContent = "Siguiente Ronda";
     
     currentGen = DOM.genFilter.value;
@@ -260,13 +301,47 @@ function updateUI() {
     DOM.loadingState.style.display = 'none';
     DOM.pokemonContainer.classList.remove('hidden');
     isAnimating = false;
+    
+    // Auto-start timer for lightning mode
+    if (gameMode === 'lightning') {
+        timeAttackActive = true;
+        clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+            timeRemaining--;
+            updateTimerText();
+            if (timeRemaining <= 0) {
+                clearInterval(timerInterval);
+                handleTimeoutLightning();
+            }
+        }, 1000);
+    }
+}
+
+function handleTimeoutLightning() {
+    isAnimating = true;
+    streak = 0; // Lost streak
+    DOM.streak.textContent = streak;
+    
+    const maxStatValue = Math.max(...currentPokemons.map(p => p.stats[currentStat]));
+    
+    currentPokemons.forEach((poke, i) => {
+        const card = document.getElementById(`card-${i}`);
+        document.getElementById(`stat-${i}`).classList.add('visible');
+        card.classList.add('disabled');
+        if (poke.stats[currentStat] === maxStatValue) card.classList.add('correct');
+        else card.classList.add('faded');
+    });
+    
+    // Proceed seamlessly without overlay message
+    setTimeout(() => {
+        startRound();
+    }, 1200);
 }
 
 function selectPokemon(selectedIndex) {
     if (isAnimating) return;
     
-    // Check execution for Time Attack
-    if (isTimeAttackMode && !timeAttackActive) {
+    if (gameMode === 'time-attack' && !timeAttackActive) {
         timeAttackActive = true;
         timerInterval = setInterval(() => {
             timeRemaining--;
@@ -278,7 +353,8 @@ function selectPokemon(selectedIndex) {
         }, 1000);
     }
 
-    if (isTimeAttackMode && timeRemaining <= 0) return;
+    if (gameMode === 'time-attack' && timeRemaining <= 0) return;
+    if (gameMode === 'lightning') clearInterval(timerInterval); // freeze timer
 
     isAnimating = true;
     
@@ -292,14 +368,12 @@ function selectPokemon(selectedIndex) {
     });
     
     setTimeout(() => {
-        // If time's up during animation phase, abort showing standard next round
-        if (isTimeAttackMode && timeRemaining <= 0) {
+        if (gameMode === 'time-attack' && timeRemaining <= 0) {
             currentPokemons.forEach((poke, i) => {
                 const card = document.getElementById(`card-${i}`);
                 if (poke.stats[currentStat] === maxStatValue) card.classList.add('correct');
                 else card.classList.add('faded');
             });
-            // Result is finalized by finishTimeAttack() 
             return;
         }
 
@@ -328,11 +402,17 @@ function handleCorrectChoice() {
     streak++;
     DOM.streak.textContent = streak;
     
-    if (isTimeAttackMode) {
+    if (gameMode === 'time-attack') {
         if (streak > timeAttackHighScore) {
             timeAttackHighScore = streak;
             DOM.highScore.textContent = timeAttackHighScore;
             localStorage.setItem('pokeSpeedTAHighScore', timeAttackHighScore);
+        }
+    } else if (gameMode === 'lightning') {
+        if (streak > lightningHighScore) {
+            lightningHighScore = streak;
+            DOM.highScore.textContent = lightningHighScore;
+            localStorage.setItem('pokeSpeedLgHighScore', lightningHighScore);
         }
     } else {
         if (streak > highScore) {
@@ -343,21 +423,51 @@ function handleCorrectChoice() {
     }
     
     fireConfetti();
-    showResult("¡Correcto!", "#10B981");
+    
+    if (gameMode === 'lightning') {
+        showResult("¡Correcto!", "#10B981", true);
+        return; // skips manual explicit button
+    }
+    
+    if (gameMode !== 'time-attack' || (gameMode === 'time-attack' && timeRemaining > 0)) {
+        showResult("¡Correcto!", "#10B981");
+    }
 }
 
 function handleWrongChoice() {
-    if (!isTimeAttackMode) {
+    if (gameMode === 'normal' || gameMode === 'lightning') {
         streak = 0;
         DOM.streak.textContent = streak;
     }
-    showResult("¡Fallaste!", "#EF4444");
+    // Time attack keeps streak intact.
+    
+    if (gameMode === 'lightning') {
+        showResult("¡Fallaste!", "#EF4444", true);
+        return; // skips absolute block
+    }
+    
+    if (gameMode !== 'time-attack' || (gameMode === 'time-attack' && timeRemaining > 0)) {
+        showResult("¡Fallaste!", "#EF4444");
+    }
 }
 
-function showResult(message, color) {
+function showResult(message, color, isLightning = false) {
+    if (isLightning) {
+        DOM.resultMessage.textContent = message;
+        DOM.resultMessage.style.color = color;
+        DOM.resultOverlay.classList.remove('hidden');
+        DOM.nextBtn.classList.add('hidden'); // Force no button block
+        
+        setTimeout(() => {
+            DOM.resultOverlay.classList.add('hidden');
+            DOM.nextBtn.classList.remove('hidden');
+            startRound();
+        }, 1200); // 1.2s delay and then jumps to next round seamlessly
+        return;
+    }
+
     setTimeout(() => {
-        // Double check not to override time attack finish
-        if (isTimeAttackMode && timeRemaining <= 0) return;
+        if (gameMode === 'time-attack' && timeRemaining <= 0) return;
         DOM.resultMessage.textContent = message;
         DOM.resultMessage.style.color = color;
         DOM.resultOverlay.classList.remove('hidden');
@@ -365,8 +475,7 @@ function showResult(message, color) {
 }
 
 function nextRound() {
-    // If Time attack game over, restart full game
-    if (isTimeAttackMode && timeRemaining <= 0) {
+    if (gameMode === 'time-attack' && timeRemaining <= 0) {
         resetGame();
     } else {
         startRound();
@@ -377,6 +486,7 @@ function finishTimeAttack() {
     isAnimating = true;
     DOM.resultMessage.textContent = `¡Tiempo agotado! Lograste ${streak} aciertos.`;
     DOM.resultMessage.style.color = "#3B82F6";
+    DOM.nextBtn.classList.remove('hidden');
     DOM.nextBtn.textContent = "Jugar de nuevo";
     DOM.resultOverlay.classList.remove('hidden');
     

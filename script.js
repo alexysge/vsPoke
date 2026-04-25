@@ -208,6 +208,7 @@ async function startRound() {
     currentDifficulty = DOM.difficultyFilter.value;
     
     DOM.pokemonContainer.dataset.count = currentCount;
+    DOM.timerDisplay.style.opacity = '1'; // Restore timer
     
     try {
         if (currentDifficulty === 'easy') {
@@ -321,6 +322,7 @@ function handleTimeoutLightning() {
     isAnimating = true;
     streak = 0; // Lost streak
     DOM.streak.textContent = streak;
+    DOM.timerDisplay.style.opacity = '0'; // Hide timer!
     
     const maxStatValue = Math.max(...currentPokemons.map(p => p.stats[currentStat]));
     
@@ -335,7 +337,7 @@ function handleTimeoutLightning() {
     // Proceed seamlessly without overlay message
     setTimeout(() => {
         startRound();
-    }, 1200);
+    }, 3000); // 3 seconds timeout explicitly requested
 }
 
 function selectPokemon(selectedIndex) {
@@ -447,6 +449,8 @@ function handleWrongChoice() {
 }
 
 function showResult(message, color, isAutoAdvance = false) {
+    DOM.timerDisplay.style.opacity = '0'; // Hide timer so it doesn't obstruct
+    
     if (isAutoAdvance) {
         DOM.resultMessage.textContent = message;
         DOM.resultMessage.style.color = color;

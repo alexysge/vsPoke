@@ -606,7 +606,44 @@ body.immersive .pokemon-card {
     border-left: none;
     border-right: none;
     margin: 0;
-    justify-content: center;
+    padding: 1rem;
+    
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+}
+
+body.immersive .card-info {
+    flex: 0 0 auto !important;
+    text-align: center !important;
+}
+
+body.immersive .poke-image-container {
+    width: 220px !important;
+    height: 220px !important;
+    max-width: 70vw !important;
+    max-height: 30vh !important;
+}
+
+body.immersive .pokemon-container[data-count="4"] .poke-image-container {
+    width: 150px !important;
+    height: 150px !important;
+    max-width: 40vw !important;
+    max-height: 20vh !important;
+}
+
+body.immersive .timer-display {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 4rem; /* Tamaño medio */
+    z-index: 80;
+    pointer-events: none;
+    margin: 0;
+    text-shadow: 0px 4px 20px rgba(0,0,0,0.8), 0 0 20px var(--success-glow);
+    opacity: 0.85;
 }
 
 @media (min-width: 769px) { 
@@ -712,10 +749,13 @@ body.immersive .pokemon-card {
         min-height: auto;
     }
 
-    /* Force 2x2 grid for 4 pokemon on mobile */
-    .pokemon-container[data-count="4"] {
-        display: grid;
+    /* Force 2x2 grid for 4 pokemon on mobile, even in Immersive Mode */
+    .pokemon-container[data-count="4"],
+    body.immersive .pokemon-container[data-count="4"] {
+        display: grid !important;
         grid-template-columns: repeat(2, 1fr);
+        grid-template-rows: repeat(2, 1fr);
+        flex-direction: unset;
     }
     
     .pokemon-card {

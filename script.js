@@ -424,14 +424,12 @@ function handleCorrectChoice() {
     
     fireConfetti();
     
-    if (gameMode === 'lightning') {
+    if (gameMode === 'lightning' || (gameMode === 'time-attack' && timeRemaining > 0)) {
         showResult("¡Correcto!", "#10B981", true);
-        return; // skips manual explicit button
+        return;
     }
     
-    if (gameMode !== 'time-attack' || (gameMode === 'time-attack' && timeRemaining > 0)) {
-        showResult("¡Correcto!", "#10B981");
-    }
+    showResult("¡Correcto!", "#10B981");
 }
 
 function handleWrongChoice() {
@@ -439,26 +437,24 @@ function handleWrongChoice() {
         streak = 0;
         DOM.streak.textContent = streak;
     }
-    // Time attack keeps streak intact.
     
-    if (gameMode === 'lightning') {
+    if (gameMode === 'lightning' || (gameMode === 'time-attack' && timeRemaining > 0)) {
         showResult("¡Fallaste!", "#EF4444", true);
-        return; // skips absolute block
+        return;
     }
     
-    if (gameMode !== 'time-attack' || (gameMode === 'time-attack' && timeRemaining > 0)) {
-        showResult("¡Fallaste!", "#EF4444");
-    }
+    showResult("¡Fallaste!", "#EF4444");
 }
 
-function showResult(message, color, isLightning = false) {
-    if (isLightning) {
+function showResult(message, color, isAutoAdvance = false) {
+    if (isAutoAdvance) {
         DOM.resultMessage.textContent = message;
         DOM.resultMessage.style.color = color;
         DOM.resultOverlay.classList.remove('hidden');
         DOM.nextBtn.classList.add('hidden'); // Force no button block
         
         setTimeout(() => {
+            if (gameMode === 'time-attack' && timeRemaining <= 0) return; // safeguard against timer ending mid-transition
             DOM.resultOverlay.classList.add('hidden');
             DOM.nextBtn.classList.remove('hidden');
             startRound();
@@ -471,6 +467,7 @@ function showResult(message, color, isLightning = false) {
         DOM.resultMessage.textContent = message;
         DOM.resultMessage.style.color = color;
         DOM.resultOverlay.classList.remove('hidden');
+        DOM.nextBtn.classList.remove('hidden');
     }, 1000);
 }
 
@@ -501,3 +498,28 @@ function fireConfetti() {
         colors: ['#FF5A5F', '#10B981', '#F59E0B']
     });
 }
+
+function toggleImmersiveMode() {
+    const isImmersive = document.getElementById('immersive-toggle').checked;
+    
+    if (isImmersive) {
+        document.body.classList.add('immersive');
+        if (document.documentElement.requestFullscreen) {
+            document.documentElement.requestFullscreen().catch(e => console.log("Fullscreen request denied", e));
+        }
+    } else {
+        document.body.classList.remove('immersive');
+        if (document.fullscreenElement) {
+            document.exitFullscreen().catch(e => console.log("Fullscreen exit denied", e));
+        }
+    }
+}
+
+// Reset visual toggle if user exits Full Screen via ESC or mobile swipe.
+document.addEventListener('fullscreenchange', () => {
+    if (!document.fullscreenElement) {
+        document.body.classList.remove('immersive');
+        const toggle = document.getElementById('immersive-toggle');
+        if(toggle) toggle.checked = false;
+    }
+});
